@@ -9,35 +9,28 @@ const auth = require('../middleware/auth');
 router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: 'username, email and password are required' });
+        }
 
         // Check if user already exists
-        let user = await User.findOne({ email });
-        if (user) {
+        const existing = await User.findOne({ email });
+        if (existing) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Create new user
-        user = new User({
-            username,
-            email,
-            password
-        });
-
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-
-        // Save user
+        // Create new user (password will be hashed by schema pre-save hook)
+        const user = new User({ username, email, password });
         await user.save();
 
         // Create token
         const token = jwt.sign(
             { userId: user._id },
-            process.env.JWT_SECRET || 'your-secret-key',
+            process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
 
-        res.status(201).json({
+        return res.status(201).json({
             token,
             user: {
                 _id: user._id,
@@ -47,7 +40,16 @@ router.post('/register', async (req, res) => {
         });
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ message: 'Server error during registration' });
+        if (error && error.code === 11000) {
+            return res.status(400).json({ message: 'Email already registered' });
+        }
+        if (error && error.name === 'ValidationError') {
+            const messages = Object.values(error.errors || {}).map(e => e.message);
+            return res.status(400).json({ message: messages[0] || 'Invalid input' });
+        }
+        // Return the actual error message for debugging
+        const errorMsg = error.message || 'Server error during registration';
+        return res.status(500).json({ message: errorMsg });
     }
 });
 
@@ -71,7 +73,7 @@ router.post('/login', async (req, res) => {
         // Create token
         const token = jwt.sign(
             { userId: user._id },
-            process.env.JWT_SECRET || 'your-secret-key',
+            process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
 

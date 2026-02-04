@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Journal = require('../models/journal');
+const Journal = require('../models/Journal');
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const fs = require('fs');

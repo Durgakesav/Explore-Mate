@@ -1,0 +1,118 @@
+   ┌───────────────┐
+   │ User sends     │
+   │ chat message   │
+   └───────┬────────┘
+           │
+           ▼
+ ┌──────────────────────┐
+ │ Extract keywords from │
+ │ the user query        │
+ └─────────┬────────────┘
+           │
+           ▼
+ ┌─────────────────────────────┐
+ │ Search PUBLIC journals only │
+ │ using regex matching        │
+ └───────────┬─────────────────┘
+             │
+             ▼
+   ┌─────────────────────┐
+   │ Found matches?       │
+   └───────┬─────────────┘
+           │Yes                      No│
+           ▼                            ▼
+ ┌──────────────────────┐        ┌─────────────┐
+ │ Convert journals      │        │ Return empty│
+ │ into context blocks   │        │ context ""  │
+ └──────────┬───────────┘        └─────────────┘
+            │
+            ▼
+ ┌───────────────────────────┐
+ │ Inject context into AI    │
+ │ messages (system role)    │
+ └───────────┬───────────────┘
+             │
+             ▼
+   ┌───────────────────────┐
+   │ Send request to AI     │
+   └──────────┬────────────┘
+              │
+              ▼
+   ┌─────────────────────┐
+   │ AI uses context only │
+   │ if relevant          │
+   └──────────┬──────────┘
+              │
+              ▼
+   ┌───────────────────────┐
+   │ Return assistant reply │
+   └────────────────────────┘
+
+
+
+
+┌───────────────────────────────────────┐
+│ POST / (chat request)                 │
+└──────────────────┬────────────────────┘
+                   │
+                   ▼
+        ┌─────────────────────┐
+        │ Validate "message"   │
+        └──────────┬──────────┘
+                   │
+                   ▼
+     ┌───────────────────────────┐
+     │ Try decode JWT → userId?  │
+     └───────────────┬───────────┘
+                     │
+                     ▼
+        ┌──────────────────────────────┐
+        │ buildContext(message, userId)│
+        └───────┬──────────────────────┘
+                │
+                ▼
+ ┌─────────────────────────────────────────────┐
+ │ In buildContext():                           │
+ │   • Extract first 6 keywords                 │
+ │   • Create regex using OR conditions         │
+ │   • Query PUBLIC journal fields only         │
+ │   • Limit to 5 results                       │
+ │   • Format into text blocks                  │
+ │   • Return formatted context or ""           │
+ └─────────────────────────────────────────────┘
+                │
+                ▼
+     ┌────────────────────────────────┐
+     │ Build messages array:          │
+     │ 1. System Prompt               │
+     │ 2. RAG context (if any)        │
+     │ 3. Last 10 history items       │
+     │ 4. User message                │
+     └─────────────────┬──────────────┘
+                       │
+                       ▼
+    ┌──────────────────────────────────────┐
+    │ Check if AI_API_KEY exists           │
+    └──────────────┬───────────────────────┘
+                   │Yes                               No│
+                   ▼                                   ▼
+   ┌────────────────────────────┐           ┌──────────────────────────────┐
+   │ Send request to external   │           │ Build offline fallback reply │
+   │ AI API (Groq/OpenAI)       │           └──────────────┬──────────────┘
+   └──────────────┬─────────────┘                          │
+                  │                                         ▼
+                  ▼                             ┌───────────────────────────┐
+ ┌───────────────────────────────┐             │ return { reply: fallback } │
+ │ Receive model output text     │             └────────────────────────────┘
+ └──────────────┬────────────────┘
+                │
+                ▼
+   ┌──────────────────────────────────┐
+   │ If userId exists: save messages  │
+   │ (user + assistant reply)         │
+   └───────────────────┬──────────────┘
+                       │
+                       ▼
+        ┌─────────────────────────────┐
+        │ return { reply: text }      │
+        └─────────────────────────────┘

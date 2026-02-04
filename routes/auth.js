@@ -9,7 +9,7 @@ router.post('/register', async (req, res) => {
     try {
         const user = new User(req.body);
         await user.save();
-        const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET || 'your-secret-key',{expiresIn:'1h'});
+        const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET,{expiresIn:'1h'});
         res.status(201).json({ user, token });
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -29,7 +29,7 @@ router.post('/login', async (req, res) => {
             throw new Error('Unable to login');
         }
 
-        const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET || 'your-secret-key',{expiresIn:'1h'});
+        const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET,{expiresIn:'1h'});
         res.json({ user, token });
     } catch (error) {
         res.status(400).json({ error: error.message });

@@ -38,6 +38,6 @@ const journalSchema = new mongoose.Schema({
 journalSchema.index({image:1})
 journalSchema.index({images:1})
 journalSchema.index({owner:1})
-const Journal = mongoose.model('Journal', journalSchema);
+const Journal = mongoose.models.Journal || mongoose.model('Journal', journalSchema);
 
 module.exports = Journal; 
